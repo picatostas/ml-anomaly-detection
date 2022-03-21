@@ -9,8 +9,9 @@
 
 import csv
 import matplotlib.pyplot as plt
+from tkinter import filedialog
 
-filename = "../logs/DoS_attack.csv"
+filename = filedialog.askopenfilename(title="Select a log:", initialdir="./", filetypes = [("Log files","*.csv"),("All", "*")])
 
 cr = csv.reader(open(filename,"r"), delimiter=",")
 
