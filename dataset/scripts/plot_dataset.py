@@ -6,13 +6,15 @@
 # License: Creative Commons Attribution-ShareAlike 4.0 International License
 #
 ##############################################################################################
-
+# %%
 import csv
 import matplotlib.pyplot as plt
 from tkinter import filedialog
 
 filename = filedialog.askopenfilename(title="Select a log:", initialdir="./", filetypes = [("Log files","*.csv"),("All", "*")])
-
+# %%
+import csv
+import matplotlib.pyplot as plt
 cr = csv.reader(open(filename,"r"), delimiter=",")
 
 time1 = []
@@ -66,7 +68,7 @@ for idx, row in enumerate(cr):
                 time2.append(time)
                 if time > time_max:
                     time_max = time
-
+# %%
 #PLOTS
 fig, ax = plt.subplots(3, 1)
 
