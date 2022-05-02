@@ -1,6 +1,5 @@
 # %%
 import csv
-import matplotlib.pyplot as plt
 import glob
 import os
 
@@ -18,17 +17,14 @@ for file in filenames:
     sensorIN1 = []
     sensorIN3 = []
 
-    time3 = []
     sensorPP = []
     sensorPG = []
     sensorVP = []
     sensorVG = []
 
-    time2 = []
     sounder = []
     sencondary_level = []
 
-    # Pruebas
     time_max = 0.0
 
     for idx, row in enumerate(cr):
@@ -54,18 +50,16 @@ for file in filenames:
                     sensors = format(int(row[2]), '08b')
                     sensorPP.append(int(sensors[0]))
                     sensorPG.append(int(sensors[1]))
-                    time3.append(time)
                     if time > time_max:
                         time_max = time
                 elif row[1] == "4":
                     sounder.append(int(row[2]))
                     sencondary_level.append(10000 - int(row[2]))
-                    time2.append(time)
                     if time > time_max:
                         time_max = time
 
     data_len = min([len(time1), len(sensorIN0), len(sensorIN1), len(sensorIN2), len(sensorIN3), len(sensorPP), len(sensorPG), len(sounder)])
-    # out_f.write("timestamp, S0, S1, S2, S3, main_pump, aux_pump, ultrasound\n")
+    out_f.write("S0,S1,S2,S3,main_pump,aux_pump,ultrasound,class\n")
     print("File:\t{}\tdata_len:\t{}".format(file, data_len))
     for i in range(data_len - 1):
         out_f.write("{},{},{},{},{},{},{},{}\n".format(sensorIN0[i], sensorIN1[i], sensorIN2[i], sensorIN3[i], sensorPP[i], sensorPG[i], sencondary_level[i], out_filename))
