@@ -8,9 +8,10 @@ current_dir = './dataset'
 filenames = glob.glob(current_dir + '/logs/*.csv')
 
 for file in filenames:
-    cr = csv.reader(open(file,"r"), delimiter=",")
-    out_filename = os.path.basename(file)
-    out_f = open(current_dir + '/exported_logs/' + out_filename[:-4] + '_sorted.csv',"w")
+    cr = csv.reader(open(file, "r"), delimiter=",")
+    out_filename = os.path.basename(file)[:-4]
+    out_f = open(current_dir + '/exported_logs/' +
+                 out_filename + '_sorted.csv', "w")
     time1 = []
     sensorIN0 = []
     sensorIN2 = []
@@ -27,13 +28,14 @@ for file in filenames:
     sounder = []
     sencondary_level = []
 
-    #Pruebas
+    # Pruebas
     time_max = 0.0
 
     for idx, row in enumerate(cr):
         if idx > 0:
             if row[1] in ("2", "3", "4"):
-                time = (float(row[0][11:13])*60 + float(row[0][14:16]))*60 + float(row[0][17:23])
+                time = (float(row[0][11:13])*60 + float(row[0]
+                        [14:16]))*60 + float(row[0][17:23])
                 if idx == 2:
                     second = False
                     time_inicial = time
@@ -63,9 +65,11 @@ for file in filenames:
                         time_max = time
 
     data_len = min([len(time1), len(sensorIN0), len(sensorIN1), len(sensorIN2), len(sensorIN3), len(sensorPP), len(sensorPG), len(sounder)])
-    out_f.write("timestamp, S0, S1, S2, S3, main_pump, aux_pump, ultrasound\n")
+    # out_f.write("timestamp, S0, S1, S2, S3, main_pump, aux_pump, ultrasound\n")
+    print("File:\t{}\tdata_len:\t{}".format(file, data_len))
     for i in range(data_len - 1):
-        out_f.write("{},{},{},{},{},{},{},{}\n".format(time1[i], sensorIN0[i], sensorIN1[i], sensorIN2[i],sensorIN3[i], sensorPP[i], sensorPG[i], sounder[i]))
+        out_f.write("{},{},{},{},{},{},{},{}\n".format(sensorIN0[i], sensorIN1[i], sensorIN2[i], sensorIN3[i], sensorPP[i], sensorPG[i], sencondary_level[i], out_filename))
+        # out_f.write("{},{},{},{},{},{},{},{},{}\n".format(time1[i], sensorIN0[i], sensorIN1[i], sensorIN2[i], sensorIN3[i], sensorPP[i], sensorPG[i], sencondary_level[i], out_filename))
     out_f.close()
 
 # %%

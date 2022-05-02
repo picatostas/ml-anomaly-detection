@@ -5,7 +5,7 @@ import os
 
 current_dir = './dataset'
 filenames = glob.glob(current_dir + '/exported_logs/*.csv')
-
+# %%
 for file in filenames:
     timestamp = []
     S0 = []
@@ -62,5 +62,6 @@ for file in filenames:
     ax[2].grid()
 
     plt.tight_layout()
+    plt.show()
 
 # %%
