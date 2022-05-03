@@ -1,5 +1,6 @@
+# %%
 import numpy as np
-import matplotlib.pylpot as plt
+import matplotlib.pyplot as plt
 from keras.models import Sequential, Model
 from keras.layers import CuDNNLSTM, LSTM, Input, Dropout, Dense, RepeatVector, TimeDistributed
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -7,7 +8,7 @@ import pandas as pd
 import seaborn as sns
 
 
-dataframe = pd.read_csv('GE.csv')
+dataframe = pd.read_csv('./rnn_tests/GE.csv')
 df = dataframe[['Date', 'Close']]
 df['Date']
 df['Date'] = pd.to_datetime(df['Date'])
@@ -34,6 +35,7 @@ def to_sequences(x, y, seq_size=1):
 trainX, trainY = to_sequences(train[['Close']], train['Close'], seq_size)
 testX, testY = to_sequences(test[['Close']], test['Close'], seq_size)
 
+# %%
 model = Sequential()
 
 model.add(CuDNNLSTM(128, input_shape=(trainX.shape[1], trainX.shape[2])))
@@ -49,3 +51,5 @@ history = model.fit(trainX, trainY, epochs=10, batch_size=32, validation_split=0
 plt.plot(history.history['loss'], label='Training loss')
 plt.plot(history.history['val_loss'], label='Validation loss')
 plt.legend()
+
+# %%

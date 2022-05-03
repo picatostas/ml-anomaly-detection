@@ -3,8 +3,12 @@ import glob
 import os
 import pandas as pd
 import numpy as np
-import h5py as h5
-
+import random
+import matplotlib.pyplot as plt
+# %%
+from keras.models import Sequential
+from keras.layers import Flatten, Dense, Dropout, CuDNNLSTM, BatchNormalization, Input, SimpleRNN
+from keras.optimizer_v2.adam import Adam
 # %%
 files = glob.glob('./logs_rev/*.csv')
 
@@ -65,8 +69,81 @@ for file in files:
 
     print(f"file:{os.path.basename(file)[:-4]}\tlen:{data_len}\tstride bins:{stride_bins}")
 
+print(f"total bins: {total_bins}, sequence_len: {len(sequence_data)}")
+
 sequence_data = np.array(sequence_data)
 
-print(f"total bins: {total_bins}, sequence_len: {len(sequence_data)}")
+# randomize the samples
+random.shuffle(sequence_data)
+# %%
+# we will start with a 65/35 split to begin with
+train_test_split = 0.65
+split_idx = int(len(sequence_data)*train_test_split)
+train_x, train_y = sequence_data[0:split_idx,:,:-1], sequence_data[0:split_idx,:,-1]
+test_x, test_y = sequence_data[split_idx:,:,:-1], sequence_data[split_idx:,:,-1]
+
+# %%
+print(f"train data: {len(train_x)} validation: {len(test_x)} \n")
+print(f"TRAIN, Failures: {np.count_nonzero(train_y == 0)}, Normal: {np.count_nonzero(train_y == 1)}\n")
+print(f"TEST,  Failures: {np.count_nonzero(test_y == 0)}, Normal: {np.count_nonzero(test_y == 1)}\n")
+print(f"INSE train_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
+# %%
+model = Sequential()
+model.add(CuDNNLSTM(128, input_shape=(train_x.shape[1:]), return_sequences=True))
+model.add(Dropout(0.2))
+model.add(BatchNormalization())
+
+model.add(CuDNNLSTM(128, return_sequences=True))
+model.add(Dropout(0.1))
+model.add(BatchNormalization())
+
+model.add(CuDNNLSTM(128))
+model.add(Dropout(0.2))
+model.add(BatchNormalization())
+model.add(Dense(7, activation='relu'))
+model.add(Dropout(0.2))
+
+model.add(Dense(2, activation='softmax'))
+print(model.summary())
+# %%
+opt = Adam(learning_rate=1e-3, decay=1e-5)
+model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+model.fit(train_x, train_y, epochs=10, validation_data=(test_x, test_y))
+
+# %%
+exit()
+# %%
+model = Sequential()
+model.add(Flatten(input_shape=(train_x.shape[1:])))
+model.add(Dense(128, activation='relu'))
+model.add(Dense(2))
+model.summary()
+opt = Adam(learning_rate=1e-3, decay=1e-5)
+model.compile(loss='sparse_categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+model.fit(train_x, train_y, epochs=3, validation_data=(test_x, test_y))
+
+# %%
+model = Sequential()
+model.add(CuDNNLSTM(128, input_shape=(train_x.shape[1:]), return_sequences=True))
+model.add(Dropout(0.2))
+model.add(BatchNormalization())
+
+model.add(CuDNNLSTM(128, return_sequences=True))
+model.add(Dropout(0.1))
+model.add(BatchNormalization())
+
+model.add(CuDNNLSTM(128))
+model.add(Dropout(0.2))
+model.add(BatchNormalization())
+
+model.add(Dense(32, activation='relu'))
+model.add(Dropout(0.2))
+
+model.add(Dense(2, activation='softmax'))
+model.summary()
+# %%
+opt = Adam(learning_rate=1e-3, decay=1e-5)
+model.compile(loss='sparse_categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+model.fit(train_x, train_y, epochs=3, validation_data=(test_x, test_y))
 
 # %%
