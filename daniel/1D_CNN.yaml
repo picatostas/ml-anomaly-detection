@@ -1,0 +1,36 @@
+- class: Conv1D
+  is_active: true
+  name: conv1d
+  params:
+    activation: relu
+    filters: 8
+    kernel_size: 1
+    padding: valid
+- class: GaussianNoise
+  is_active: true
+  name: gaussian_noise
+  params:
+    stddev: 0.1
+- class: Conv1D
+  is_active: true
+  name: conv1d
+  params:
+    activation: relu
+    filters: 64
+    kernel_size: 1
+    padding: valid
+- class: Dropout
+  is_active: true
+  name: dropout
+  params:
+    rate: 0.1
+- class: Flatten
+  is_active: true
+  name: flatten
+  params: null
+- class: Dense
+  is_active: true
+  name: dense
+  params:
+    activation: softmax
+    units: 3
