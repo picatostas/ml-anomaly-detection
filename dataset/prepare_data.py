@@ -1,15 +1,9 @@
-# %%
 import glob
 import os
 import pandas as pd
 import numpy as np
 import random
-import matplotlib.pyplot as plt
-# %%
-from keras.models import Sequential
-from keras.layers import Flatten, Dense, Dropout, CuDNNLSTM, BatchNormalization, Input, SimpleRNN
-from keras.optimizer_v2.adam import Adam
-# %%
+import h5py
 files = glob.glob('./logs_rev/*.csv')
 
 # container for stride bins
@@ -30,8 +24,6 @@ def normalize(data, data_max=None, data_min=None):
     else:
         return (data - _min)/pp
 
-
-# %%
 for file in files:
     df = pd.read_csv(file, delimiter=',')
     # TODO: Classify according to different failures, for the time being we will
@@ -48,8 +40,8 @@ for file in files:
         df['ultrasound'].values, data_max=10000, data_min=0)
 
     stride_bins = 0
-    stride = 10
-    bin_size = 50
+    stride = 5
+    bin_size = 100
     data_len = len(df)
 
     data_idx = 0
@@ -73,30 +65,25 @@ print(f"total bins: {total_bins}, sequence_len: {len(sequence_data)}")
 
 sequence_data = np.array(sequence_data)
 
-# randomize the samples
 random.shuffle(sequence_data)
-# %%
-# we will start with a 65/35 split to begin with
 train_test_split = 0.65
 split_idx = int(len(sequence_data)*train_test_split)
 train_x, train_y = sequence_data[0:split_idx,:,:-1], sequence_data[0:split_idx,:,-1]
 test_x,  test_y =  sequence_data[split_idx:, :,:-1], sequence_data[split_idx: ,:,-1]
 
-# %%
 print(f"train data: {len(train_x)} validation: {len(test_x)} \n")
 print(f"TRAIN, Failures: {np.count_nonzero(train_y == 0)}, Normal: {np.count_nonzero(train_y == 1)}\n")
 print(f"TEST,  Failures: {np.count_nonzero(test_y == 0)}, Normal: {np.count_nonzero(test_y == 1)}\n")
 print(f"INSE train_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
-# %%
-model = Sequential()
-model.add(CuDNNLSTM(128, input_shape=(train_x.shape[1:]), return_sequences=True))
-model.add(CuDNNLSTM(128, return_sequences=True))
-model.add(CuDNNLSTM(128))
-model.add(Dense(1))
-print(model.summary())
-# %%
-opt = Adam(learning_rate=1e-3, decay=1e-5)
-model.compile(loss='mean_squared_error', optimizer=opt, metrics=['accuracy'])
-model.fit(train_x, train_y, epochs=10, batch_size=1, validation_data=(test_x, test_y))
 
-# %%
+h5 = h5py.File('inse_final.hdf5', 'w')
+
+h5['train_x'] = train_x
+h5['train_y'] = train_y
+h5['test_x'] = test_x
+h5['test_y'] = test_y
+
+h5.attrs['stride'] = stride
+h5.attrs['train_test_split'] = train_test_split
+
+h5.close()
