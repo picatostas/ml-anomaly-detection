@@ -80,7 +80,7 @@ random.shuffle(sequence_data)
 train_test_split = 0.65
 split_idx = int(len(sequence_data)*train_test_split)
 train_x, train_y = sequence_data[0:split_idx,:,:-1], sequence_data[0:split_idx,:,-1]
-test_x, test_y = sequence_data[split_idx:,:,:-1], sequence_data[split_idx:,:,-1]
+test_x,  test_y =  sequence_data[split_idx:, :,:-1], sequence_data[split_idx: ,:,-1]
 
 # %%
 print(f"train data: {len(train_x)} validation: {len(test_x)} \n")
@@ -90,60 +90,13 @@ print(f"INSE train_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x
 # %%
 model = Sequential()
 model.add(CuDNNLSTM(128, input_shape=(train_x.shape[1:]), return_sequences=True))
-model.add(Dropout(0.2))
-model.add(BatchNormalization())
-
 model.add(CuDNNLSTM(128, return_sequences=True))
-model.add(Dropout(0.1))
-model.add(BatchNormalization())
-
 model.add(CuDNNLSTM(128))
-model.add(Dropout(0.2))
-model.add(BatchNormalization())
-model.add(Dense(7, activation='relu'))
-model.add(Dropout(0.2))
-
-model.add(Dense(2, activation='softmax'))
+model.add(Dense(1))
 print(model.summary())
 # %%
 opt = Adam(learning_rate=1e-3, decay=1e-5)
-model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
-model.fit(train_x, train_y, epochs=10, validation_data=(test_x, test_y))
-
-# %%
-exit()
-# %%
-model = Sequential()
-model.add(Flatten(input_shape=(train_x.shape[1:])))
-model.add(Dense(128, activation='relu'))
-model.add(Dense(2))
-model.summary()
-opt = Adam(learning_rate=1e-3, decay=1e-5)
-model.compile(loss='sparse_categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
-model.fit(train_x, train_y, epochs=3, validation_data=(test_x, test_y))
-
-# %%
-model = Sequential()
-model.add(CuDNNLSTM(128, input_shape=(train_x.shape[1:]), return_sequences=True))
-model.add(Dropout(0.2))
-model.add(BatchNormalization())
-
-model.add(CuDNNLSTM(128, return_sequences=True))
-model.add(Dropout(0.1))
-model.add(BatchNormalization())
-
-model.add(CuDNNLSTM(128))
-model.add(Dropout(0.2))
-model.add(BatchNormalization())
-
-model.add(Dense(32, activation='relu'))
-model.add(Dropout(0.2))
-
-model.add(Dense(2, activation='softmax'))
-model.summary()
-# %%
-opt = Adam(learning_rate=1e-3, decay=1e-5)
-model.compile(loss='sparse_categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
-model.fit(train_x, train_y, epochs=3, validation_data=(test_x, test_y))
+model.compile(loss='mean_squared_error', optimizer=opt, metrics=['accuracy'])
+model.fit(train_x, train_y, epochs=10, batch_size=1, validation_data=(test_x, test_y))
 
 # %%
