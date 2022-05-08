@@ -17,7 +17,7 @@
     units: 20
     activation: relu
     recurrent_activation: relu
-    return_sequences: true
+    return_sequences: false
 - class: GaussianNoise
   is_active: true
   name: gaussian_noise
@@ -37,4 +37,4 @@
   name: dense
   params:
     activation: softmax
-    units: 3
+    units: 7

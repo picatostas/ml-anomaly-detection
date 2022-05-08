@@ -33,4 +33,4 @@
   name: dense
   params:
     activation: softmax
-    units: 3
+    units: 7
