@@ -1,3 +1,4 @@
+# %%
 import glob
 import os
 import pandas as pd
@@ -62,21 +63,35 @@ for file in files:
     print(f"file:{os.path.basename(file)[:-4]}\tlen:{data_len}\tstride bins:{stride_bins}")
 
 print(f"total bins: {total_bins}, sequence_len: {len(sequence_data)}")
-
 sequence_data = np.array(sequence_data)
 
 random.shuffle(sequence_data)
+data_x = sequence_data[:,:,:-1] # we remove the results column
+# since we are already setting each class as a numerical value
+# we can take the mean per sequence as output result
+data_y = sequence_data[:,:,-1].mean(axis=1)
+
+# %% Export the data with no split
+h5 = h5py.File('inse_final_no_split.hdf5', 'w')
+
+h5['data_x'] = data_x
+h5['data_y'] = data_y
+
+h5.attrs['stride'] = stride
+
+h5.close()
+# %% split the data here or do it in the train script
 train_test_split = 0.65
 split_idx = int(len(sequence_data)*train_test_split)
-train_x, train_y = sequence_data[0:split_idx,:,:-1], sequence_data[0:split_idx,:,-1]
-test_x,  test_y =  sequence_data[split_idx:, :,:-1], sequence_data[split_idx: ,:,-1]
+train_x, train_y = data_x[0:split_idx,:], data_y[0:split_idx]
+test_x,  test_y =  data_x[split_idx:, :], data_y[split_idx: ]
 
 print(f"train data: {len(train_x)} validation: {len(test_x)} \n")
 print(f"TRAIN, Failures: {np.count_nonzero(train_y == 0)}, Normal: {np.count_nonzero(train_y == 1)}\n")
 print(f"TEST,  Failures: {np.count_nonzero(test_y == 0)}, Normal: {np.count_nonzero(test_y == 1)}\n")
 print(f"INSE train_x: {train_x.shape}, train_y: {train_y.shape}, test_x: {test_x.shape}, test_y: {test_y.shape}")
 
-h5 = h5py.File('inse_final.hdf5', 'w')
+h5 = h5py.File('inse_final_split.hdf5', 'w')
 
 h5['train_x'] = train_x
 h5['train_y'] = train_y
@@ -87,3 +102,5 @@ h5.attrs['stride'] = stride
 h5.attrs['train_test_split'] = train_test_split
 
 h5.close()
+
+# %%

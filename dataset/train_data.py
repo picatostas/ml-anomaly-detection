@@ -7,7 +7,7 @@ from keras.models import Sequential
 from keras.layers import Flatten, Dense, Dropout, CuDNNLSTM, BatchNormalization, Input, SimpleRNN
 from keras.optimizer_v2.adam import Adam
 # %%
-h5 = h5py.File('inse_final.hdf5', 'r')
+h5 = h5py.File('inse_final_split.hdf5', 'r')
 
 train_x = h5['train_x'] [:]
 train_y = h5['train_y'] [:]
@@ -28,7 +28,7 @@ model = Sequential()
 model.add(CuDNNLSTM(128, input_shape=(train_x.shape[1:]), return_sequences=True))
 model.add(CuDNNLSTM(128, return_sequences=True))
 model.add(CuDNNLSTM(128))
-model.add(Dense(1))
+model.add(Dense(2))
 print(model.summary())
 # %%
 opt = Adam(learning_rate=1e-3, decay=1e-5)
