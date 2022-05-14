@@ -3,10 +3,9 @@ import glob
 import pandas as pd
 import random
 import numpy as np
-import matplotlib.pyplot as plt
 # %%
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, CuDNNLSTM, RepeatVector, TimeDistributed, BatchNormalization
+from keras.models import Sequential, Model
+from keras.layers import Dense, Dropout, CuDNNLSTM, Input, RepeatVector, TimeDistributed, Conv1D, GaussianNoise, Flatten, MaxPooling1D
 from keras.optimizer_v2.adam import Adam
 from tensorflow.keras.utils import to_categorical
 
@@ -51,17 +50,17 @@ for file in files:
     # container for stride bins
     data_bin = []
     df = pd.read_csv(file, delimiter=',')
-    split = 0.50
+    split = 0.35
     # the only input thats not binary is the main_level level sensor, so its the only
     # one that needs normalizing. Based on datasheet, it goes from 0-10000
     df['main_level'] = normalize(
         df['main_level'].values, data_max=10000, data_min=0)
-    df['aux_level'] = normalize(
-        df['aux_level'].values, data_max=0b1111, data_min=0)
     # simplify examples
     class_name = df['class'][0]
+    class_to_use = class_name
     if class_name != 'normal':
         df = df.replace(class_name, 'error')
+        class_to_use = 'error'
 
     stride = 100
     bin_size = 291
@@ -73,26 +72,22 @@ for file in files:
         data_stop = data_idx + bin_size
         data_bin.append(df[data_start:data_stop].values)
         data_idx += stride
-
     data_bin = np.array(data_bin)
-    random.shuffle(data_bin)
-
-    if len(data_bin) < 1:
-        continue
     # only inputs
     x_bin = data_bin[:, :, :-1]
+    x_bin_t = np.zeros(shape=(x_bin.shape[0], x_bin.shape[2], x_bin.shape[1]))
+    for ix, data in enumerate(x_bin):
+        x_bin_t[ix] = data.T
     # we only want 1 output per bin
-    y_bin = data_bin[:, 0, -1]
-
     # To ensure that there is a proportional distribution of examples
     # in both train and test, do the split as per log file
-    for idx, chunk in enumerate(data_bin):
+    for idx, _ in enumerate(data_bin):
         if idx < int(len(data_bin)*split):
-            test_x.append(x_bin[idx])
-            test_y.append(y_bin[idx])
+            test_x.append(x_bin_t[idx])
+            test_y.append(class_to_use)
         else:
-            train_x.append(x_bin[idx])
-            train_y.append(y_bin[idx])
+            train_x.append(x_bin_t[idx])
+            train_y.append(class_to_use)
 
 train_x = np.array(train_x, dtype=float)
 test_x = np.array(test_x, dtype=float)
@@ -103,25 +98,14 @@ train_y = to_categorical(data_labels, label_num)
 test_labels = label_assignment(test_y, labels_dict)
 test_y = to_categorical(test_labels, label_num)
 
-
 # %% MODEL 1
 model = Sequential()
-model.add(CuDNNLSTM(128, input_shape=(train_x.shape[1:]), return_sequences=True))
-model.add(Dropout(0.2))
-model.add(BatchNormalization())
-
-model.add(CuDNNLSTM(128, return_sequences=True))
-model.add(Dropout(0.1))
-model.add(BatchNormalization())
-
-model.add(CuDNNLSTM(128))
-model.add(Dropout(0.2))
-model.add(BatchNormalization())
-
-model.add(Dense(32, activation='relu'))
-model.add(Dropout(0.2))
-
-model.add(Dense(label_num, activation='softmax'))
+model.add(Conv1D(activation='relu', filters=100, kernel_size=2, input_shape=train_x[0].shape))
+model.add(Conv1D(activation='relu', filters=100, kernel_size=2))
+model.add(MaxPooling1D())
+model.add(Flatten())
+model.add(Dense(label_num))
+model.summary()
 # %%
 
 opt = Adam(learning_rate=1e-3, decay=1e-5)

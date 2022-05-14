@@ -29,20 +29,32 @@ not_time_distributed = [
 ]
 eager_execution = True
 optimizer = "Adam"
-
+artificial_data = False
 
 def main():
     # layer_list = load_from_yaml('1D_CNN.yaml')
     # layer_list = load_from_yaml('1D_CNN_simple.yaml')
     layer_list = load_from_yaml('LSTM.yaml')
 
-    train_x, train_y, test_x, test_y = load_data_split()
-    data_labels, label_num, labels_dict = label_conversion(train_y)
-    train_y = to_categorical(data_labels, label_num)
+    if not artificial_data:
+        train_x, train_y, test_x, test_y = load_data_split_tranposed(split=0.35)
+    else:
+
+        train_x = np.zeros((200,10,2))
+        train_x[0:100,:,:] = np.random.uniform(.8,1.0,[100,10,2])
+        train_x[100:,:,:] = np.random.uniform(.0,0.2,[100,10,2])
+        train_y = ['high'] * 100 + ['low'] * 100
+        test_x = np.zeros((200,10,2))
+        test_x[0:100,:,:] = np.random.uniform(.8,1.0,[100,10,2])
+        test_x[100:,:,:] = np.random.uniform(.0,0.2,[100,10,2])
+        test_y = ['high'] * 100 + ['low'] * 100
+
+    train_labels, label_num, labels_dict = label_conversion(train_y)
+    train_y = to_categorical(train_labels, label_num)
     test_labels = label_assignment(test_y, labels_dict)
     test_y = to_categorical(test_labels, label_num)
 
-    model = init_model(layer_list, train_x[0].shape, label_num)
+    model = init_model(layer_list, train_x.shape[1:], label_num)
     model.summary()
 
     train_params = {
@@ -53,6 +65,28 @@ def main():
         "learning_rate": 0.001,
     }
     train(model, train_x, train_y, train_params)
+
+    if artificial_data:
+        for i in range(100):
+            if np.random.rand() > 0.5:
+                ground_truth = 'high'
+                d = np.random.uniform(.8,1.0,[10,2])
+            else:
+                ground_truth = 'low'
+                d = np.random.uniform(.0,0.2,[10,2])
+
+            result = predict(model, d, labels_dict)
+            print("\nGround truth: {}".format(ground_truth))
+            print("Prediction: {} ({}%)".format(result[0]['prediction'], result[0]['confidence']))
+
+def print_result(results):
+    for res in results:
+        for key in res:
+            if key == 'label_predictions':
+                for l in res['label_predictions']:
+                    print(l, res['label_predictions'][l])
+            else:
+                print("{}: {}".format(key, res[key]))
 
 
 def normalize(data, data_max=None, data_min=None):
@@ -85,8 +119,10 @@ def load_data_split(split=0.25):
         class_name = df['class'][0]
         if class_name != 'normal':
             df = df.replace(class_name, 'error')
-        stride = 5
-        bin_size = 100
+        # stride = 5
+        # bin_size = 100
+        stride = 100
+        bin_size = 291
         data_len = len(df)
 
         data_idx = 0
@@ -117,6 +153,59 @@ def load_data_split(split=0.25):
     return train_x, train_y, test_x, test_y
 
 
+def load_data_split_tranposed(split=0.25):
+    files = glob.glob('../dataset/exported_logs/*.csv')
+    # container for stride bins
+    train_x, train_y, test_x, test_y = [], [], [], []
+    for file in files:
+        data_bin = []
+        df = pd.read_csv(file, delimiter=',')
+
+        # the only input thats not binary is the ultrasound level sensor, so its the only
+        # one that needs normalizing. Based on datasheet, it goes from 0-10000
+        df['main_level'] = normalize(
+            df['main_level'].values, data_max=10000, data_min=0)
+        df['aux_level'] = normalize(
+            df['aux_level'].values, data_max=0b1111, data_min=0)
+        class_name = df['class'][0]
+        class_to_use = class_name
+        if class_name != 'normal':
+            df = df.replace(class_name, 'error')
+            class_to_use = 'error'
+        stride = 30
+        bin_size = 100
+        data_len = len(df)
+
+        data_idx = 0
+        while ((data_idx + bin_size) <= data_len):
+            data_start = data_idx
+            data_stop = data_idx + bin_size
+            data_bin.append(df[data_start:data_stop].values)
+            data_idx += stride
+        data_bin = np.array(data_bin)
+        # only inputs
+        x_bin = data_bin[:, :, :-1]
+        x_bin_t = np.zeros(shape=(x_bin.shape[0], x_bin.shape[2], x_bin.shape[1]))
+        for ix, data in enumerate(x_bin):
+            x_bin_t[ix] = data.T
+        # we only want 1 output per bin
+        # To ensure that there is a proportional distribution of examples
+        # in both train and test, do the split as per log file
+        for idx, _ in enumerate(data_bin):
+            if idx < int(len(data_bin)*split):
+                test_x.append(x_bin_t[idx])
+                test_y.append(class_to_use)
+            else:
+                train_x.append(x_bin_t[idx])
+                train_y.append(class_to_use)
+
+    train_x = np.array(train_x, dtype=float)
+    test_x = np.array(test_x, dtype=float)
+
+
+    return train_x, train_y, test_x, test_y
+
+
 def load_from_yaml(filename):
     data = None
     try:
@@ -125,7 +214,6 @@ def load_from_yaml(filename):
     except Exception as e:
         print("Failed to load data\n", e)
     return data
-
 
 def init_model(layer_list, input_dim, output_dim, steps=1):
     if not isinstance(input_dim, list):
@@ -165,8 +253,7 @@ def init_model(layer_list, input_dim, output_dim, steps=1):
         try:
             cb = layer_callbacks[layer["name"]]["class"]
         except KeyError:
-            print("Layer {} not found in layer_definitions.py!".format(
-                layer["name"]))
+            print("Layer {} not found in layer_definitions.py!".format(layer["name"]))
 
         # Wrap layers in TimeDistributed until first LSTM layer
         if layer["name"] == "lstm":
@@ -188,8 +275,7 @@ def init_model(layer_list, input_dim, output_dim, steps=1):
                         options[entry] = tuple(opt)
                     else:
                         options[entry] = opt
-            print("{}: Adding {} with\n{}".format(
-                idx + 1, layer["name"], options))
+            print("{}: Adding {} with\n{}".format(idx + 1, layer["name"], options))
             if idx == 0 and nr_layers > 1:
                 if time_series:
                     x = TimeDistributed(cb(**options))(inputs)
@@ -205,8 +291,7 @@ def init_model(layer_list, input_dim, output_dim, steps=1):
                 predictions = cb(output_dim, **options)(x)
         except Exception as e:
             traceback.print_exc()
-            error = "\nLayer nr. {} failed. Error adding {}\n{}".format(
-                idx + 1, layer["name"], e)
+            error = "\nLayer nr. {} failed. Error adding {}\n{}".format(idx + 1, layer["name"], e)
             sys.exit(0)
 
         if layer["name"] == "lstm":
@@ -325,13 +410,13 @@ def eval(model, x, y):
     print("Loss: ", test_loss, "Accuracy: ", test_acc)
 
 
-def predict(model, x):
-    if len(x.shape) == len(self.model.input_shape) - 1:
-        if x.shape[0] == self.model.input_shape[1]:
+def predict(model, x, labels_dict):
+    if len(x.shape) == len(model.input_shape) - 1:
+        if x.shape[0] == model.input_shape[1]:
             x = np.expand_dims(x, 0)
         else:
             x = np.expand_dims(x, -1)
-    if len(x.shape) == len(self.model.input_shape) - 2:
+    if len(x.shape) == len(model.input_shape) - 2:
         x = np.expand_dims(x, 0)
         x = np.expand_dims(x, -1)
 
@@ -347,8 +432,8 @@ def predict(model, x):
     result = list()
 
     num2label = {}
-    for key in self.labels_dict:
-        num2label[self.labels_dict[key]] = key
+    for key in labels_dict:
+        num2label[labels_dict[key]] = key
 
     for pred in prediction:
         confidence = 0
@@ -421,8 +506,7 @@ class TrainCallback(Callback):
             try:
                 if logs["val_loss"] < self.val_loss:
                     self.val_loss = logs["val_loss"]
-                    fname = "model_epoch_{}_val_loss_{:.04f}".format(
-                        self.epoch, self.val_loss)
+                    fname = "model_epoch_{}_val_loss_{:.04f}".format(self.epoch, self.val_loss)
                     fname = os.path.join(self.save_best["folder"], fname)
                     self.parent.save_model(fname,
                                            self.save_best["feature_list"],
