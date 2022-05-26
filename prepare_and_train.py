@@ -12,18 +12,15 @@ logs_path = './exported_logs/'
                                                  transpose=True,
                                                  simplify_classes=True)
 
-# %% MODEL 1
+# %%
 
-model = load_model('LSTM_SEQ', input_shape=(train_x.shape[1:]), output_dim=train_y.shape[1])
-
+model = load_model('LSTM_B', input_shape=(train_x.shape[1:]), output_dim=train_y.shape[1])
 
 # %%
 
 opt = Adam(learning_rate=1e-3, decay=1e-5)
 model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 history = model.fit(train_x, train_y, epochs=100, validation_data=(test_x, test_y), verbose=0)
-# %%
-# plot the results
 plot_results(history)
 
 # %%

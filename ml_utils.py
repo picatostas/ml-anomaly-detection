@@ -129,13 +129,14 @@ def plot_results(history, title="traning results"):
     plt.show()
 
 
-model_names = ['LSTM_SEQ']
+model_names = ['LSTM_A', 'LSTM_B', 'CONV1D']
+
 def load_model(name, input_shape, output_dim):
 
     if name not in model_names:
         print('Model doesn\'t exist, please check the models')
         return
-    if name == 'LSTM_SEQ':
+    if name == 'LSTM_A':
         model = Sequential()
         model.add(CuDNNLSTM(128, input_shape=input_shape, return_sequences=True))
         model.add(Dropout(0.2))
@@ -143,6 +144,26 @@ def load_model(name, input_shape, output_dim):
         model.add(Dropout(0.2))
         model.add(Dense(32, activation='relu'))
         model.add(Dropout(0.2))
+
+    if name == 'CONV1D':
+        model = Sequential()
+        model.add(Input(shape=input_shape))
+        model.add(Conv1D(filters=8, kernel_size=1,
+                  padding='valid', activation='relu'))
+        model.add(GaussianNoise(stddev=0.1))
+        model.add(BatchNormalization())
+        model.add(Conv1D(filters=16, kernel_size=1,
+                  padding='valid', activation='relu'))
+        model.add(Dropout(rate=0.1))
+        model.add(Flatten())
+
+    if name == 'LSTM_B':
+        model = Sequential()
+        model.add(Input(shape=input_shape))
+        model.add(Conv1D(filters=32, kernel_size=4, padding='valid', activation='relu'))
+        model.add(CuDNNLSTM(20))
+        model.add(Dropout(rate=0.3))
+        model.add(Flatten())
 
     # All models have the same output layer
     model.add(Dense(output_dim, activation='softmax'))
