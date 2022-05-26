@@ -154,7 +154,7 @@ def load_data_split(split=0.25):
 
 
 def load_data_split_tranposed(split=0.25):
-    files = glob.glob('../exported_logs/*.csv')
+    files = glob.glob('../../exported_logs/*.csv')
     # container for stride bins
     train_x, train_y, test_x, test_y = [], [], [], []
     for file in files:
