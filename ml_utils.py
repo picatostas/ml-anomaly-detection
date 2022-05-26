@@ -4,6 +4,21 @@ import random
 import matplotlib.pyplot as plt
 from tensorflow.keras.utils import to_categorical
 import pandas as pd
+from keras.models import Sequential, Model
+from keras.layers import (
+    Dense,
+    Dropout,
+    CuDNNLSTM,
+    BatchNormalization,
+    Input,
+    RepeatVector,
+    TimeDistributed,
+    Conv1D,
+    GaussianNoise,
+    Flatten,
+    MaxPooling1D
+)
+
 
 def normalize(data, data_max=None, data_min=None):
     if type(data) != np.ndarray:
@@ -18,6 +33,7 @@ def normalize(data, data_max=None, data_min=None):
     else:
         return (data - _min)/pp
 
+
 def label_conversion(labels):
     label_num = 0
     converted_labels = np.zeros(len(labels))
@@ -31,11 +47,13 @@ def label_conversion(labels):
         converted_labels[i] = labels_dict[label]
     return converted_labels, label_num, labels_dict
 
+
 def label_assignment(labels, labels_dict):
     assigned_labels = np.zeros(len(labels))
     for i, label in enumerate(labels):
         assigned_labels[i] = labels_dict[label]
     return assigned_labels
+
 
 def load_data(split=0.35, logs_path=None, stride=50, bin_size=100, transpose=True, simplify_classes=True):
 
@@ -71,7 +89,8 @@ def load_data(split=0.35, logs_path=None, stride=50, bin_size=100, transpose=Tru
         random.shuffle(data_bin)
         # only inputs
         x_bin = data_bin[:, :, :-1]
-        x_bin_t = np.zeros(shape=(x_bin.shape[0], x_bin.shape[2], x_bin.shape[1]))
+        x_bin_t = np.zeros(
+            shape=(x_bin.shape[0], x_bin.shape[2], x_bin.shape[1]))
         for ix, data in enumerate(x_bin):
             x_bin_t[ix] = data.T if transpose else data
         # To ensure that there is a proportional distribution of examples
@@ -94,9 +113,10 @@ def load_data(split=0.35, logs_path=None, stride=50, bin_size=100, transpose=Tru
 
     return (train_x, train_y), (test_x, test_y)
 
+
 def plot_results(history, title="traning results"):
 
-    fig, axs = plt.subplots(1,2, figsize=(10,6))
+    fig, axs = plt.subplots(1, 2, figsize=(10, 6))
     fig.suptitle(title)
     axs[0].set_xlabel("epochs")
     axs[1].set_xlabel("epochs")
@@ -107,3 +127,25 @@ def plot_results(history, title="traning results"):
     axs[0].legend()
     axs[1].legend()
     plt.show()
+
+
+model_names = ['LSTM_SEQ']
+def load_model(name, input_shape, output_dim):
+
+    if name not in model_names:
+        print('Model doesn\'t exist, please check the models')
+        return
+    if name == 'LSTM_SEQ':
+        model = Sequential()
+        model.add(CuDNNLSTM(128, input_shape=input_shape, return_sequences=True))
+        model.add(Dropout(0.2))
+        model.add(CuDNNLSTM(128))
+        model.add(Dropout(0.2))
+        model.add(Dense(32, activation='relu'))
+        model.add(Dropout(0.2))
+
+    # All models have the same output layer
+    model.add(Dense(output_dim, activation='softmax'))
+
+    print(model.summary())
+    return model
