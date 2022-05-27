@@ -168,5 +168,5 @@ def load_model(name, input_shape, output_dim):
     # All models have the same output layer
     model.add(Dense(output_dim, activation='softmax'))
 
-    print(model.summary())
+    # print(model.summary())
     return model
