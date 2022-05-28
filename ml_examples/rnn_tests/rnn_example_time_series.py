@@ -1,4 +1,7 @@
 # %%
+
+# Example taken from DigitalSreeni https://www.youtube.com/c/DigitalSreeni
+
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import Sequential
