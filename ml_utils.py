@@ -86,6 +86,11 @@ def load_data(split=0.35, logs_path=None, stride=50, bin_size=100, transpose=Tru
             data_bin.append(df[data_start:data_stop].values)
             data_idx += stride
         data_bin = np.array(data_bin)
+
+        # If the data_len < log_len, skip
+        if len(data_bin) < 1:
+            continue
+
         random.shuffle(data_bin)
         # only inputs
         x_bin = data_bin[:, :, :-1]
@@ -120,12 +125,18 @@ def plot_results(history, title="traning results"):
     fig.suptitle(title)
     axs[0].set_xlabel("epochs")
     axs[1].set_xlabel("epochs")
+    axs[1].set_ylim(bottom=0, top=1)
     axs[0].plot(history.history['loss'], label='Training loss')
     axs[0].plot(history.history['val_loss'], label='Validation loss')
     axs[1].plot(history.history['accuracy'], label='Training accuracy')
     axs[1].plot(history.history['val_accuracy'], label='Validation accuracy')
     axs[0].legend()
     axs[1].legend()
+    axs[0].grid()
+    axs[1].grid()
+    plt.tight_layout()
+    file_name = title.replace(',', '').replace(':', '')
+    plt.savefig('./multi_dim_test/' + file_name + '.jpg')
     plt.show()
 
 
@@ -136,9 +147,13 @@ def load_model(name, input_shape, output_dim):
     if name not in model_names:
         print('Model doesn\'t exist, please check the models')
         return
+
+    # Common
+    model = Sequential()
+    model.add(Input(shape=input_shape))
+
     if name == 'LSTM_A':
-        model = Sequential()
-        model.add(CuDNNLSTM(128, input_shape=input_shape, return_sequences=True))
+        model.add(CuDNNLSTM(128, return_sequences=True))
         model.add(Dropout(0.2))
         model.add(CuDNNLSTM(128))
         model.add(Dropout(0.2))
@@ -146,8 +161,6 @@ def load_model(name, input_shape, output_dim):
         model.add(Dropout(0.2))
 
     if name == 'CONV1D':
-        model = Sequential()
-        model.add(Input(shape=input_shape))
         model.add(Conv1D(filters=8, kernel_size=1,
                   padding='valid', activation='relu'))
         model.add(GaussianNoise(stddev=0.1))
@@ -158,8 +171,6 @@ def load_model(name, input_shape, output_dim):
         model.add(Flatten())
 
     if name == 'LSTM_B':
-        model = Sequential()
-        model.add(Input(shape=input_shape))
         model.add(Conv1D(filters=32, kernel_size=4, padding='valid', activation='relu'))
         model.add(CuDNNLSTM(20))
         model.add(Dropout(rate=0.3))
