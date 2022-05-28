@@ -1,4 +1,4 @@
-# ML model for anomaly detection
+# Anomaly detection using ML and Keras
 
 This repo contains my work for the ML course on 'Dataset of anomalies and malicious acts in a cyber-physical subsystem'
 
