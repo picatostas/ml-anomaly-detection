@@ -1,3 +1,5 @@
+# Example taken from https://www.youtube.com/c/sentdex
+
 import pandas as pd
 from collections import deque
 import random

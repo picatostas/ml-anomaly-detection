@@ -1,4 +1,4 @@
-# %%
+# %% Mnist example
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, CuDNNLSTM
 from keras.datasets import mnist
